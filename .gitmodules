@@ -1,0 +1,16 @@
+[submodule "scale"]
+	path = scale
+	url = git@github.mit.edu:arch-sec/secsep-scale.git
+	branch = main
+[submodule "benchmark"]
+	path = benchmark
+	url = git@github.mit.edu:arch-sec/secsep-benchmark.git
+	branch = artifact
+[submodule "octal"]
+	path = octal
+	url = git@github.mit.edu:arch-sec/secsep-octal.git
+	branch = artifact
+[submodule "gem5"]
+	path = gem5
+	url = git@github.mit.edu:arch-sec/gem5-mirror.git
+	branch = secsep
