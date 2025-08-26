@@ -1,34 +1,11 @@
 services:
-  benchmark:
-    container_name: secsep-benchmark
+  secsep:
+    image: secsep-env:latest
+    container_name: secsep
     build:
-      context: ./benchmark
-      dockerfile: ./Dockerfile
+      context: .
       network: host
     volumes:
-      - ./benchmark:/root/benchmark
-      - ./scale:/root/scale
-    stdin_open: true
-    tty: true
-  octal:
-    container_name: secsep-octal
-    build:
-      context: ./octal
-      dockerfile: ./Dockerfile
-      network: host
-    volumes:
-      - ./octal:/root/octal
-      - ./benchmark:/root/benchmark
-    stdin_open: true
-    tty: true
-  gem5:
-    container_name: secsep-gem5
-    build:
-      context: ./gem5
-      dockerfile: ./Dockerfile
-      network: host
-    volumes:
-      - ./gem5:/root/gem5
-      - ./benchmark:/root/benchmark
+      - ./:/root/secsep
     stdin_open: true
     tty: true
