@@ -1,8 +1,7 @@
 ---
 puppeteer:
-  landscape: false
-  format: "A3"
-  timeout: 3000
+  landscape: true
+  format: "A4"
   printBackground: true
 ---
 
@@ -51,12 +50,15 @@ The framework is composed of four components explained in the following table. W
 
 `$ROOT` represents the root directory where this `README` file locates.
 
+<div class="table1">
 |Component|Location|Purpose|
 |:-|:-|:-|
 |<span style="color:blue">Scale|`$ROOT/scale`|A tiny AST walker based on Clang to collect source code information:<br>(1) Help parse ***SecSep*** annotations on each function.<br>(2) Get statistics of each function, e.g. the number of arguments.|
 |<span style="color:blue">Benchmark|`$ROOT/benchmark`| A directory to hold all benchmarks and do the compilation stuff.<br>(1) Contain the source code of all benchmarks. <br>(2) Use Scale to parse ***SecSep*** annotations and generate inputs for inference. <br>(3) Compile source code into assembly; compile (transformed) assembly into binary.|
 |<span style="color:orange">Octal|`$ROOT/octal`| Inference algorithms to infer Octal, the typed assembly language, from the raw assembly code.<br>(1) Infer the dependent type, valid region, and taint type. <br>(2) Check the inference results using a small-TCB checker. <br>(3) Transform original assembly based on inferred Octal using ***SecSep***'s transformations.<br>(4) Run evaluations using (transformed) binaries and Gem5.|
 |<span style="color:purple">Gem5 Simulator|`$ROOT/gem5`|Implement the ProSpeCT-like hardware defense on O3 CPU for evaluation.|
+</div>
+
 
 To get more information about each component, please visit `README` files under each component's directory.
 
@@ -129,7 +131,8 @@ Here are some configurable arguments and their explanation:
   Must be specified in hexadecimal format.
   In paper's evaluation, we use `0x800000`, i.e. 8MB.
 
-|Step|Directory|Commands|Results|
+<div class="table2">
+|Step|Work Directory|Commands|Results|
 |:-:|:-|:-|:-|
 |1|`~/secsep/benchmark`| ***SecSep*** annotations have been written by us. You can search `"@secsep"` in the benchmark directory to get a preview of them by running `grep -rnI "@secsep"`|N/A|
 |2|`~/secsep/benchmark`|Use `make paper -j` to compile and construct inference inputs for all benchmarks, or use `make <bench>` to work on a specific benchmark.|You can find the assembly code and compile-time information like call graph, struct layouts, and stack spill slots under `analysis/<bench>`.|
@@ -137,3 +140,4 @@ Here are some configurable arguments and their explanation:
 |4|`~/secsep/benchmark`|`./scripts/get_binaries.py`|Compiled binaries are at `analysis/<bench>/build`.|
 |5|`~/secsep/octal`    |Run `./scripts/eval.py --delta <delta> -p 16 -v` to let Gem5 exeuute all original or transformed binaries to evaluate their performance. The parallelism is controlled by `-p` (FYI, there are around 42 evaluation tasks. Be careful that too much parallelism may drain your memory). Use `-v` or `-vv` to get verbose output. <br>You will see the prompt "Will run gem5, confirm?". Press `y` and `<Return>` to confirm running Gem5 and get brand-new evaluation results.|An evaluation directory named by current time will be generated under `eval`.|
 |6|`/root/octal`    |Run `./scripts/figure.py <eval dir>` to draw figures according to the evaluation, where `<eval dir>` is the directory generated in step 5.|Figures are under `<eval dir>/figures`.|
+</div>
