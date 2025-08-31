@@ -61,8 +61,13 @@ RUN cmake -G Ninja \
   -DCMAKE_INSTALL_PREFIX=/usr/local/llvm-16 \
   -DLLVM_ENABLE_PROJECTS="clang" \
   -DLLVM_TARGETS_TO_BUILD="X86" \
+  -DLLVM_PARALLEL_LINK_JOBS=1 \
+  -DLLVM_INCLUDE_TESTS=OFF \
+  -DLLVM_INCLUDE_EXAMPLES=OFF \
+  -DCMAKE_EXE_LINKER_FLAGS="-Wl,--no-keep-memory" \
+  -DCMAKE_SHARED_LINKER_FLAGS="-Wl,--no-keep-memory" \
   ../llvm
-RUN ninja && ninja install
+RUN ninja -j 8 && ninja install
 RUN ln -sf /usr/local/llvm-16/bin/clang        /usr/local/bin/clang-16        && \
     ln -sf /usr/local/llvm-16/bin/llc          /usr/local/bin/llc-16          && \
     ln -sf /usr/local/llvm-16/bin/opt          /usr/local/bin/opt-16          && \
