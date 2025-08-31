@@ -64,10 +64,26 @@ RUN cmake -G Ninja \
   -DLLVM_PARALLEL_LINK_JOBS=1 \
   -DLLVM_INCLUDE_TESTS=OFF \
   -DLLVM_INCLUDE_EXAMPLES=OFF \
+  -DLLVM_BUILD_LLVM_DYLIB=ON \
+  -DLLVM_LINK_LLVM_DYLIB=ON \
   -DCMAKE_EXE_LINKER_FLAGS="-Wl,--no-keep-memory" \
   -DCMAKE_SHARED_LINKER_FLAGS="-Wl,--no-keep-memory" \
   ../llvm
-RUN ninja -j 8 && ninja install
+RUN bash -euxo pipefail -c '\
+  J=$(nproc); MINJ=4; ATTEMPTS=0; MAX_ATTEMPTS=6; \
+  echo "Starting ninja with -j${J} (will back off on failure, min ${MINJ})"; \
+  until ninja -j"${J}"; do \
+    ATTEMPTS=$((ATTEMPTS+1)); \
+    if [ "${ATTEMPTS}" -ge "${MAX_ATTEMPTS}" ]; then \
+      echo "Build still fails after ${ATTEMPTS} attempts"; exit 1; \
+    fi; \
+    echo "ninja failed (likely OOM). Backing off parallelism..."; \
+    J=$(( (J+1)/2 )); \
+    if [ "${J}" -lt "${MINJ}" ]; then J=${MINJ}; fi; \
+    echo "Retrying with -j${J} (attempt ${ATTEMPTS}/${MAX_ATTEMPTS})"; \
+  done; \
+  ninja install \
+'
 RUN ln -sf /usr/local/llvm-16/bin/clang        /usr/local/bin/clang-16        && \
     ln -sf /usr/local/llvm-16/bin/llc          /usr/local/bin/llc-16          && \
     ln -sf /usr/local/llvm-16/bin/opt          /usr/local/bin/opt-16          && \
@@ -91,7 +107,7 @@ RUN git clone https://github.com/ocamllibs/clangml.git $HOME/clangml
 WORKDIR $HOME/clangml
 RUN git checkout 52df9b7
 # Need to fix curl redirect bug in m4/download.sh
-RUN eval $(opam env --switch=scale) && \
+RUN ulimit -s unlimited && eval $(opam env --switch=scale) && \
     sed -i 's/curl\s*"\$url"/curl -L "\$url"/' m4/download.sh && \
     ./bootstrap.sh && \
     ./configure --with-llvm-config=/usr/local/bin/llvm-config-16 && \

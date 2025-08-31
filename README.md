@@ -106,12 +106,16 @@ To build Gem5,
 ```bash
 # switch to Gem5 directory
 cd ~/secsep/gem5
+
 # build Gem5 using scons
 # <nproc> is at your discretion
 scons build/X86_MESI_Two_Level/gem5.opt -j<nproc>
+# You will see the following prompt:
+# > You're missing the pre-commit/commit-msg hooks. These hook help to ensure your
+# > ...
+# > Press enter to continue, or ctrl-c to abort:
+# Simply press <Enter> to continue
 ```
-
-You will see Gem5's environment prompts to setup `pre-commit`. You can safely ignore/skip the warnings since we are only building Gem5 instead of developing it.
 
 # 3. Run Toolchain for Benchmarks
 
