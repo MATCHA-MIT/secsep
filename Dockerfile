@@ -30,7 +30,7 @@ RUN --mount=type=cache,target=/var/cache/apt \
 RUN curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh > install.sh && \
     sh install.sh && \
     rm install.sh
-ENV THEME="agnoster"
+ENV THEME="ys"
 RUN sed -i 's/^ZSH_THEME=".\+"$/ZSH_THEME="$THEME"/g' ~/.zshrc
 SHELL ["/bin/zsh", "-c"]
 RUN chsh -s /bin/zsh
