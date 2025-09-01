@@ -9,14 +9,19 @@ puppeteer:
 
 <!-- code_chunk_output -->
 
-- [1. Overview](#1-overview)
-  - [1.1. Workflow](#11-workflow)
-  - [1.2. Artifact Hierarchy Explained](#12-artifact-hierarchy-explained)
-- [2. Environment Setup](#2-environment-setup)
-  - [2.1. Docker](#21-docker)
-  - [2.2. Build and Start Docker Containers](#22-build-and-start-docker-containers)
-  - [2.3. Build Components](#23-build-components)
-- [3. Run Toolchain for Benchmarks](#3-run-toolchain-for-benchmarks)
+- [1. Overview](#overview)
+  - [1.1. Workflow](#workflow)
+  - [1.2. Artifact Hierarchy Explained](#artifact-hierarchy-explained)
+- [2. Environment Setup](#environment-setup)
+  - [2.1. Docker](#docker)
+  - [2.2. Build and Start Docker Containers](#build-and-start-docker-containers)
+  - [2.3. Build Components](#build-components)
+- [3. Run Toolchain for Benchmarks](#run-toolchain-for-benchmarks)
+- [4. Components Explained](#components-explained)
+  - [Scale](#scale)
+  - [Benchmark](#benchmark)
+  - [Octal](#octal)
+  - [Gem5](#gem5)
 
 <!-- /code_chunk_output -->
 
@@ -135,7 +140,7 @@ We provide commands to run ***SecSep*** toolchain on one or all benchmarks.
 These commands correspond to the five steps introduced in the [workflow section](#11-workflow).
 You must switch to the specified directory to run the commands.
 The results of each command is briefly explained.
-More information are explained in later sections.
+More information are provided in later sections.
 
 Here are some configurable arguments and their explanation:
 
@@ -152,6 +157,27 @@ Here are some configurable arguments and their explanation:
 |2|`~/secsep/benchmark`|Use `make paper -j` to compile and construct inference inputs for all benchmarks, or use `make <bench>` to work on a specific benchmark.|You can find the assembly code and compile-time information like call graph, struct layouts, and stack spill slots under `analysis/<bench>`.|
 |3|`~/secsep/octal`    |Run `./scripts/run.py full --delta <delta> --name <bench>` to infer, check, and transform one benchmark.<br> Run `--name <bench1>,<bench2>,...` to work on multiple benchmarks.<br>To work on all benchmarks in parallel, just remove the `--name` argument.|Infer results and logs are under `out/<bench>`. Transformed assemblies are installed to `~/secsep/benchmark/analysis/<bench>/<bench>.<transform>.s`.|
 |4|`~/secsep/benchmark`|`./scripts/get_binaries.py`|Compiled binaries are at `analysis/<bench>/build`.|
-|5|`~/secsep/octal`    |Run `./scripts/eval.py --delta <delta> -p 16 -v` to let Gem5 exeuute all original or transformed binaries to evaluate their performance. The parallelism is controlled by `-p` (FYI, there are around 42 evaluation tasks. Be careful that too much parallelism may drain your memory). Use `-v` or `-vv` to get verbose output. <br>You will see the prompt "Will run gem5, confirm?". Press `y` and `<Return>` to confirm running Gem5 and get brand-new evaluation results.|An evaluation directory named by current time will be generated under `eval`.|
+|5|`~/secsep/octal`    |Run `./scripts/eval.py --delta <delta> -p 16 -v` to let Gem5 exeuute all original or transformed binaries to evaluate their performance. The parallelism is controlled by `-p` (FYI, there are around 42 evaluation tasks. Be careful that too much parallelism may drain your memory). Use `-v` or `-vv` to get verbose output. <br>You will see the prompt "Will run gem5, confirm?". Press `y` and `<Return>` to confirm starting fresh Gem5 runs to get evaluation results.|An evaluation directory named by current time will be generated under `eval`.|
 |6|`/root/octal`    |Run `./scripts/figure.py <eval dir>` to draw figures according to the evaluation, where `<eval dir>` is the directory generated in step 5.|Figures are under `<eval dir>/figures`.|
 </div>
+
+# 4. Components Explained
+
+## Scale
+
+## Benchmark
+
+Many of our benchmarks are adapted from BoringSSL, an open-source cryptographic library.
+The base version is commit `d26384906`, located under `$ROOT/benchmark/third_party/boringssl`.
+The online version can be accessed through [this link](https://github.com/google/boringssl/tree/d2638490679527185fe9817e24eca316acc93d96).
+
+We override selected BoringSSL source files by placing their modified versions under `$ROOT/benchmark/src/boringssl`.
+These files follow the same directory hierarchy as the BoringSSL source tree.
+Readers can inspect the changes by comparing each modified file with its paired counterpart in the base BoringSSL source tree.
+
+When searching for a file to include during benchmark compilation, the build system uses the modified version if available; otherwise, it falls back to the base version.
+The priority logic is defined in `$ROOT/benchmark/Makefile`.
+
+## Octal
+
+## Gem5
