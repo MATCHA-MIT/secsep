@@ -19,8 +19,11 @@ RUN apt-get update && \
         libc6-dev libtinfo-dev libzstd-dev zlib1g zlib1g-dev libxml2-dev libedit-dev libgmp-dev \
         libprotobuf-dev protobuf-compiler libprotoc-dev libgoogle-perftools-dev \
         doxygen libboost-all-dev libhdf5-serial-dev libpng-dev libelf-dev \
+        gcc-x86-64-linux-gnu g++-x86-64-linux-gnu \
         git curl zsh vim tmux gdb black \
         pipx opam golang-go && \
+    DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+        libc6-dev-amd64-cross || true && \
     rm -rf /var/lib/apt/lists/*
 
 
