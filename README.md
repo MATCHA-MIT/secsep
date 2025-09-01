@@ -9,14 +9,14 @@ puppeteer:
 
 <!-- code_chunk_output -->
 
-- [1. Overview](#overview)
-  - [1.1. Workflow](#workflow)
-  - [1.2. Artifact Hierarchy Explained](#artifact-hierarchy-explained)
-- [2. Environment Setup](#environment-setup)
-  - [2.1. Docker](#docker)
-  - [2.2. Build and Start Docker Containers](#build-and-start-docker-containers)
-  - [2.3. Build Components](#build-components)
-- [3. Run Toolchain for Benchmarks](#run-toolchain-for-benchmarks)
+- [1. Overview](#1-overview)
+  - [1.1. Workflow](#11-workflow)
+  - [1.2. Artifact Hierarchy Explained](#12-artifact-hierarchy-explained)
+- [2. Environment Setup](#2-environment-setup)
+  - [2.1. Docker](#21-docker)
+  - [2.2. Build and Start Docker Containers](#22-build-and-start-docker-containers)
+  - [2.3. Build Components](#23-build-components)
+- [3. Run Toolchain for Benchmarks](#3-run-toolchain-for-benchmarks)
 
 <!-- /code_chunk_output -->
 
@@ -53,7 +53,7 @@ The framework is composed of four components explained in the following table. W
 <div class="table1">
 |Component|Location|Purpose|
 |:-|:-|:-|
-|<span style="color:blue">Scale|`$ROOT/scale`|A tiny AST walker based on Clang to collect source code information:<br>(1) Help parse ***SecSep*** annotations on each function.<br>(2) Get statistics of each function, e.g. the number of arguments.|
+|<span style="color:blue">Scale|`$ROOT/scale`|A tiny AST walker based on Clang to collect source-code information:<br>(1) Help parse ***SecSep*** annotations on each function.<br>(2) Get statistics of each function, e.g. the number of arguments.|
 |<span style="color:blue">Benchmark|`$ROOT/benchmark`| A directory to hold all benchmarks and do the compilation stuff.<br>(1) Contain the source code of all benchmarks. <br>(2) Use Scale to parse ***SecSep*** annotations and generate inputs for inference. <br>(3) Compile source code into assembly; compile (transformed) assembly into binary.|
 |<span style="color:orange">Octal|`$ROOT/octal`| Inference algorithms to infer Octal, the typed assembly language, from the raw assembly code.<br>(1) Infer the dependent type, valid region, and taint type. <br>(2) Check the inference results using a small-TCB checker. <br>(3) Transform original assembly based on inferred Octal using ***SecSep***'s transformations.<br>(4) Run evaluations using (transformed) binaries and Gem5.|
 |<span style="color:purple">Gem5 Simulator|`$ROOT/gem5`|Implement the ProSpeCT-like hardware defense on O3 CPU for evaluation.|
@@ -82,15 +82,14 @@ If you encounter any problem, please consider upgrade or downgrade to this versi
 
 Inside `$ROOT` directory, run
 ```bash
-docker compose up -d --build
-
+$ docker compose up -d --build
 # For older Docker, the command is "docker-compose" instead
 ```
 to build the all-in-one container `secsep` for all four components. Run `docker ps` to make sure it is built and started successfully.
 
 To attach to the container, simply run
 ```bash
-docker exec -it secsep /bin/zsh
+$ docker exec -it secsep /bin/zsh
 ```
 
 The entire `$ROOT` directory on the host is mapped to `/root/secsep` (or `~/secsep`) in the container.
@@ -100,21 +99,32 @@ Unless otherwise specified, all following operations are performed inside the co
 ## 2.3. Build Components
 
 Among all components, <span style="color:blue">Scale</span>, <span style="color:orange">Octal</span>, and <span style="color:purple">Gem5</span> needs to be built.
-However, you only need to build <span style="color:purple">Gem5</span> manually. The other two are built automatically when they are invoked.
+However, you only need to build <span style="color:purple">Gem5</span> manually.
+The other two are built automatically when they are invoked.
 
-To build Gem5,
+To build Gem5:
 ```bash
 # switch to Gem5 directory
-cd ~/secsep/gem5
+$ cd ~/secsep/gem5
 
-# build Gem5 using scons
+# build Gem5 using Scons
 # <nproc> is at your discretion
-scons build/X86_MESI_Two_Level/gem5.opt -j<nproc>
+$ scons build/X86_MESI_Two_Level/gem5.opt -j<nproc>
 # You will see the following prompt:
 # > You're missing the pre-commit/commit-msg hooks. These hook help to ensure your
 # > ...
 # > Press enter to continue, or ctrl-c to abort:
 # Simply press <Enter> to continue
+```
+
+To build Scale and Octal manually (not required):
+```bash
+# build scale
+$ cd ~/secsep/benchmark
+$ make scale
+# build octal
+$ cd ~/secsep/octal
+$ dune build && dune install
 ```
 
 # 3. Run Toolchain for Benchmarks
