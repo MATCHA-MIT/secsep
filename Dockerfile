@@ -1,5 +1,3 @@
-# syntax=docker/dockerfile:1
-
 FROM ubuntu:22.04
 
 
@@ -11,8 +9,7 @@ ENV LANG=C.UTF-8
 
 
 # Install dependencies
-RUN --mount=type=cache,target=/var/cache/apt \
-    apt-get update && \
+RUN apt-get update && \
     rm -rf /var/cache/apt/archives/lock && \
     DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
         gnupg gnupg2 wget ca-certificates apt-transport-https \
@@ -23,7 +20,8 @@ RUN --mount=type=cache,target=/var/cache/apt \
         libprotobuf-dev protobuf-compiler libprotoc-dev libgoogle-perftools-dev \
         doxygen libboost-all-dev libhdf5-serial-dev libpng-dev libelf-dev \
         git curl zsh vim tmux gdb black \
-        pipx opam golang-go
+        pipx opam golang-go && \
+    rm -rf /var/lib/apt/lists/*
 
 
 # Install and use oh-my-zsh
@@ -38,8 +36,7 @@ RUN chsh -s /bin/zsh
 
 # Install Poetry
 WORKDIR $SECSEP_ROOT
-RUN --mount=type=cache,target=$HOME/.cache \
-    pipx install poetry && \
+RUN pipx install poetry && \
     pipx install virtualenv
 ENV PATH="$HOME/.local/bin:$PATH"
 ENV VIRTUAL_ENV=$HOME/.venv
@@ -47,8 +44,7 @@ RUN virtualenv $VIRTUAL_ENV
 ENV PATH="$VIRTUAL_ENV/bin:$PATH"
 # COPY pyproject.toml poetry.lock $SECSEP_ROOT
 COPY pyproject.toml $SECSEP_ROOT
-RUN --mount=type=cache,target=$HOME/.cache \
-    poetry install
+RUN poetry install
 
 
 # Build LLVM 16.0.6
@@ -95,12 +91,12 @@ RUN rm -rf $HOME/llvm-project
 
 # Install ocaml and required packages
 # Keep it at the end since it unfolds and sets the PATH variable in .*rc file
-RUN opam init -y && \
-    opam switch create scale 4.14.2 && \
-    opam switch create octal 5.3.0 && \
-    opam install -y --switch=scale stdcompat.19 refl dune core core_unix sexp && \
-    opam install -y --switch=octal dune core z3 sexp && \
-    echo "eval $(opam env --switch=octal --set-switch)" >> ~/.zshrc
+RUN opam init -y
+RUN opam switch create scale 4.14.2
+RUN opam switch create octal 5.3.0
+RUN opam install -y --switch=scale stdcompat.19 refl dune core core_unix sexp
+RUN opam install -y --switch=octal dune core z3 sexp
+RUN echo "eval $(opam env --switch=octal --set-switch)" >> ~/.zshrc
 
 # Build and install clangml for clang 16.0.6
 RUN git clone https://github.com/ocamllibs/clangml.git $HOME/clangml
