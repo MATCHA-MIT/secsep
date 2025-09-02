@@ -119,7 +119,7 @@ The Docker container we provide has some expectations on available resources:
 
 * CPU cores: As many as possible.
 Both the container build and *SecSep* workflow can benefit from the parallelism.
-* Memory: At least 16 GB.
+* Memory: At least 16 GB. 32+ GB is recommended.
 * Free disk space: At least 128 GB.
 
 If you are using Docker Desktop:
@@ -138,7 +138,11 @@ Inside `$ROOT` directory, run
 $ docker compose up -d --build
 # For older Docker, the command is "docker-compose" instead
 ```
-to build the all-in-one container `secsep` for all four components. Run `docker ps` to make sure it is built and started successfully.
+to build the all-in-one container `secsep` for all four components.
+In case the build fails, it's likely due to exhausted resources.
+Please try to run the command again to restart the build from the failure point.
+
+Run `docker ps` to make sure it is built and started successfully.
 
 To attach to the container, simply run
 ```bash
@@ -204,11 +208,11 @@ Here are some configurable arguments and their explanation:
 <div class="table2">
 |Step|Work Directory|Commands|Results|
 |:-:|:-|:-|:-|
-|1|`~/secsep/benchmark`| *SecSep* annotations have been written by us. You can search `"@secsep"` in the benchmark directory to get a preview of them by running `grep -rnI "@secsep"`|N/A|
+|1|`~/secsep/benchmark`| *SecSep* annotations have been written by us. You can search `"@secsep"` in the benchmark directory to get a preview of them by running `grep -rnI "@secsep"`.<br>Both SecSep and ProSpeCT needs global symbol annotations (`SECRET_SYM`/`PUBLIC_SYM`).<br>In addition, ProSpeCT needs to annotate every function variable using `SECRET_VAR`/`PUBLIC_VAR`.|N/A|
 |2|`~/secsep/benchmark`|Use `make paper -j` to compile and construct inference inputs for all benchmarks, or use `make <bench>` to work on a specific benchmark.|You can find the assembly code and compile-time information like call graph, struct layouts, and stack spill slots under `analysis/<bench>`.|
 |3|`~/secsep/octal`    |Run `./scripts/run.py full --delta <delta> --name <bench>` to infer, check, and transform one benchmark.<br> Run `--name <bench1>,<bench2>,...` to work on multiple benchmarks.<br>To work on all benchmarks in parallel, just remove the `--name` argument.|Infer results and logs are under `out/<bench>`. Transformed assemblies are installed to `~/secsep/benchmark/analysis/<bench>/<bench>.<transform>.s`.|
 |4|`~/secsep/benchmark`|`./scripts/get_binaries.py`|Compiled binaries are at `analysis/<bench>/build`.|
-|5|`~/secsep/octal`    |Run `./scripts/eval.py --delta <delta> -p 16 -v` to let Gem5 execute all original or transformed binaries to evaluate their performance. The parallelism is controlled by `-p` (FYI, there are around 42 evaluation tasks. Be careful that too much parallelism may drain your memory). Use `-v` or `-vv` to get verbose output. <br>You will see the prompt "Will run gem5, confirm?". Press `y` and `<Return>` to confirm starting fresh Gem5 runs to get evaluation results.|An evaluation directory named by current time will be generated under `eval`.|
+|5|`~/secsep/octal`    |Run `./scripts/eval.py --delta <delta> -p 16 -v` to let Gem5 execute all original/transformed binaries and evaluate their performance. The parallelism is controlled by `-p` (FYI, there are 42 evaluation tasks. Be careful that too much parallelism may drain your memory). Use `-v` or `-vv` to get verbose output. <br>You will see the prompt "Will run gem5, confirm?". Press `y` and `<Return>` to confirm starting fresh Gem5 runs to get evaluation results.|An evaluation directory named by current time will be generated under `eval`.|
 |6|`~/secsep/octal`    |Run `./scripts/figure.py <eval dir>` to draw figures according to the evaluation, where `<eval dir>` is the directory generated in step 5.|Figures are under `<eval dir>/figures`.|
 </div>
 
@@ -234,11 +238,13 @@ This is used to generate Table 1 in the paper.
   * Cryptographic functions in the original binary and insecurely transformed binaries contain declassifying instructions, e.g. storing secrets into the public stack.
     * `<bench>.decl.txt`: Original binary
     * `<bench>.prospect_pubstk.decl.txt`: ProSpeCT public-stack scheme
+  * *SecSep* transformations without $C_{\text{callee}}$ also incur declassification.
+  As analyzed in Section 7.2, Figure 11 in the paper,
+  the major cause is overtainting due to inaccurate secret/public data separation and is fixed by introducing $C_{\text{callee}}$.
+    * `<bench>.tf[23].decl.txt`
   * Cryptographic functions in the securely transformed binaries do not declassify at all.
     * `<bench>.prospect_secstk.decl.txt`: ProSpeCT secret-stack scheme
     * `<bench>.tf1?.decl.txt`: SecSep's full transformation and full transformation without consecutive push pop optimization.
-  * SecSep transformations without $C_{\text{callee}}$ incurs overtainting and causes false positive declassification.
-    * `<bench>.tf[23].decl.txt`
   * Declassifying instructions within C library functions are expected,
     since transforming the C library and determining the secrecy of its global symbols are out of scope in this prototype.
 * `eval.csv`: Gem5's statistics when running binaries with or without the defense.
@@ -305,7 +311,7 @@ type t =
   }
 [@@deriving sexp, fields]
 ```
-* `struct`: Extract layouts of all struct.
+* `struct`: Extract layout of all struct.
   * Product: `$ROOT/benchmark/analysis/<bench>/<bench>.struct.sexp`
   * Type definition: In `src/func_input.ml`, find `module RecordInfo`
 * `stat`: For each function, count the lines of code, number of local variables, function arguments, ProSpeCT/SecSep annotations.
@@ -339,12 +345,13 @@ Readers can inspect the changes by comparing each modified file with its paired 
 When searching for a file to include during benchmark compilation, the build system uses the modified version if available; otherwise, it falls back to the base version.
 The priority logic is defined in `$ROOT/benchmark/Makefile`.
 
-To simplify the linking, we include the definitions of all symbols in the benchmark entry file.
+To simplify the linking, we include the definition of all symbols in the benchmark entry file.
 
 ### 4.3.2. Important Files {#benchmark-directories}
 
 * `src/`
-  * `entry/`: Entry points of all benchmarks
+  * `include/secsep.h`: Annotation macros used by *SecSep* and ProSpeCT.
+  * `entry/`: Entry point of all benchmarks
   * `boringssl/`: Replaced files for BoringSSL with *SecSep* annotations
 * `third_party/boringssl/`: BoringSSL source tree
 * `scripts/`
@@ -363,7 +370,7 @@ Octal inference, checking and transformation are written in OCaml 5.3.0.
 
 Octal inference algorithms accept the original assembly and inference inputs generated by Benchmark component,
 and output the inferred Octal.
-It contains four phases:
+It contains five phases:
 
 * Phase 0: Preprocess assembly and parse inputs
   * Products: `out/<bench>/<bench>.(prog|input)`
@@ -373,6 +380,8 @@ It contains four phases:
   * Product: `out/<bench>/<bench>.range_infer`
 * Phase 3: Taint type infer
   * Products: `out/<bench>/<bench>.(taint_infer|interface)`
+* Phase 4: `isNonChangeExp` infer (see Section 5.2 in the paper)
+  * Products: `out/<bench>/<bench>.(taint_infer|interface)` (updated)
 
 Octal checker accepts the inferred Octal and checks its correctness.
 It contains two phases:
@@ -390,7 +399,7 @@ Octal transformation takes the inferred Octal and the original assembly, and out
 
 We provide a python script `scripts/run.py` to run all phases of the Octal.
 ```bash
-./scripts/run.py infer --name <bench> --input-dir ~/secsep/benchmark/analysis --phase 0 3
+./scripts/run.py infer --name <bench> --input-dir ~/secsep/benchmark/analysis --phase 0 4
 ./scripts/run.py check --name <bench> --phase 1 1
 ./scripts/run.py transform --name <bench> --delta 0x800000 --all-tf --install-dir ~/secsep/benchmark/analysis
 ```
@@ -417,11 +426,12 @@ Figures can be drawn using
 
 * `lib/`: Inference algorithms and transformation
 * `checker/`: Type checker
-* `bin/`: Entry points of all phases
+* `bin/`: Entry point of all phases
   * Inference phase 0: `preprocess_input.ml`
   * Inference phase 1: `infer_single.ml`
   * Inference phase 2: `infer_range.ml`
   * Inference phase 3: `infer_taint.ml`
+  * Inference phase 4: `infer_change.ml`
   * Checker phase 0: `convert.ml`
   * Checker phase 1: `check.ml`
   * Transformation: `prog_transform.ml`
