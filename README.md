@@ -1,5 +1,4 @@
 ---
-pandoc_args: ["--quiet"]
 puppeteer:
   landscape: true
   format: "A4"
@@ -11,37 +10,38 @@ puppeteer:
 
 <!-- code_chunk_output -->
 
-- [1. Overview](#1-overview)
-  - [1.1. *SecSep* Workflow](#11-secsep-workflow)
-  - [1.2. Artifact Hierarchy Explained](#12-artifact-hierarchy-explained)
-- [2. Environment Setup](#2-environment-setup)
-  - [2.1. Docker](#21-docker)
-  - [2.2. Docker Resource Limitation](#22-docker-resource-limitation)
-  - [2.3. Build and Start Docker Containers](#23-build-and-start-docker-containers)
-  - [2.4. Build Components](#24-build-components)
-- [3. Run Toolchain for Benchmarks](#3-run-toolchain-for-benchmarks)
-  - [3.1. How to Read Evaluation Results](#31-how-to-read-evaluation-results)
-- [4. Components Explained](#4-components-explained)
-  - [4.1. Conventions](#41-conventions)
-    - [4.1.1. Ocaml and S-Exp](#411-ocaml-and-s-exp)
-    - [4.1.2. Naming](#412-naming)
-    - [4.1.3. Scripts](#413-scripts)
-  - [4.2. Scale](#42-scale)
-    - [4.2.1. Usage](#421-usage)
-    - [4.2.2. Important Files](#422-important-files)
-  - [4.3. Benchmark](#43-benchmark)
-    - [4.3.1. How Benchmarks are Crafted](#431-how-benchmarks-are-crafted)
-    - [4.3.2. Important Files](#432-important-files)
-  - [4.4. Octal](#44-octal)
-    - [4.4.1. Usage](#441-usage)
-    - [4.4.2. Important Files](#442-important-files)
-  - [4.5. Gem5](#45-gem5)
-    - [4.5.1. Defense Summary](#451-defense-summary)
-    - [4.5.2. Important Files](#452-important-files)
+- [1. Overview](#overview)
+  - [1.1. *SecSep* Workflow](#secsep-workflow)
+  - [1.2. Artifact Hierarchy Explained](#artifact-hierarchy-explained)
+- [2. Environment Setup](#environment-setup)
+  - [2.1. Docker](#docker)
+  - [2.2. Docker Resource Limitation](#docker-resource-limitation)
+  - [2.3. Build and Start Docker Containers](#build-and-start-docker-containers)
+  - [2.4. Build Components](#build-components)
+- [3. Run Toolchain for Benchmarks](#run-toolchain-for-benchmarks)
+  - [3.1. How to Read Evaluation Results](#how-to-read-evaluation-results)
+- [4. Components Explained](#components-explained)
+  - [4.1. Conventions](#conventions)
+    - [4.1.1. OCaml and S-Exp](#ocaml-and-s-exp)
+    - [4.1.2. Naming](#naming)
+    - [4.1.3. Scripts](#scripts)
+  - [4.2. Scale](#scale)
+    - [4.2.1. Usage](#scale-usage)
+    - [4.2.2. Important Files](#scale-directories)
+  - [4.3. Benchmark](#benchmark)
+    - [4.3.1. How Benchmarks are Crafted](#how-benchmarks-are-crafted)
+    - [4.3.2. Important Files](#benchmark-directories)
+  - [4.4. Octal](#octal)
+    - [4.4.1. Usage](#octal-usage)
+    - [4.4.2. Important Files](#octal-directories)
+  - [4.5. Gem5](#gem5)
+    - [4.5.1. Defense Summary](#defense-summary)
+    - [4.5.2. Important Files](#gem5-directories)
 
 <!-- /code_chunk_output -->
 
-<div style="page-break-after: always;"></div>
+
+<!-- <div style="page-break-after: always;"></div> -->
 
 # 1. Overview
 
@@ -208,7 +208,7 @@ Here are some configurable arguments and their explanation:
 |2|`~/secsep/benchmark`|Use `make paper -j` to compile and construct inference inputs for all benchmarks, or use `make <bench>` to work on a specific benchmark.|You can find the assembly code and compile-time information like call graph, struct layouts, and stack spill slots under `analysis/<bench>`.|
 |3|`~/secsep/octal`    |Run `./scripts/run.py full --delta <delta> --name <bench>` to infer, check, and transform one benchmark.<br> Run `--name <bench1>,<bench2>,...` to work on multiple benchmarks.<br>To work on all benchmarks in parallel, just remove the `--name` argument.|Infer results and logs are under `out/<bench>`. Transformed assemblies are installed to `~/secsep/benchmark/analysis/<bench>/<bench>.<transform>.s`.|
 |4|`~/secsep/benchmark`|`./scripts/get_binaries.py`|Compiled binaries are at `analysis/<bench>/build`.|
-|5|`~/secsep/octal`    |Run `./scripts/eval.py --delta <delta> -p 16 -v` to let Gem5 exeuute all original or transformed binaries to evaluate their performance. The parallelism is controlled by `-p` (FYI, there are around 42 evaluation tasks. Be careful that too much parallelism may drain your memory). Use `-v` or `-vv` to get verbose output. <br>You will see the prompt "Will run gem5, confirm?". Press `y` and `<Return>` to confirm starting fresh Gem5 runs to get evaluation results.|An evaluation directory named by current time will be generated under `eval`.|
+|5|`~/secsep/octal`    |Run `./scripts/eval.py --delta <delta> -p 16 -v` to let Gem5 execute all original or transformed binaries to evaluate their performance. The parallelism is controlled by `-p` (FYI, there are around 42 evaluation tasks. Be careful that too much parallelism may drain your memory). Use `-v` or `-vv` to get verbose output. <br>You will see the prompt "Will run gem5, confirm?". Press `y` and `<Return>` to confirm starting fresh Gem5 runs to get evaluation results.|An evaluation directory named by current time will be generated under `eval`.|
 |6|`~/secsep/octal`    |Run `./scripts/figure.py <eval dir>` to draw figures according to the evaluation, where `<eval dir>` is the directory generated in step 5.|Figures are under `<eval dir>/figures`.|
 </div>
 
@@ -257,12 +257,12 @@ However, it will help readers who want to delve into the code, inspect crucial i
 
 ## 4.1. Conventions
 
-### 4.1.1. Ocaml and S-Exp
+### 4.1.1. OCaml and S-Exp
 
-Many components are implemented using Ocaml.
-To transfer Ocaml data structures between components,
+Many components are implemented using OCaml.
+To transfer OCaml data structures between components,
 we use S-Exp serialization provided by `sexp` library,
-which converts Ocaml data into a JSON-like text file.
+which converts OCaml data into a JSON-like text file.
 In this artifact, it is a convention that serialized products are named with the suffix of `.sexp`.
 
 ### 4.1.2. Naming
@@ -272,9 +272,9 @@ In `.sexp` products and the source code:
 * We use `Single*` prefix on symbolic expressions related to the dependent type.
 For example,
 e.g. `SingleVar 42` is a symbolic variable of id `42`,
-and `SingleBExp SingleAdd (SingleVar 6) (SingleConst 4)` is a symbolic expression adding a symbolic variable `6` and const `4`.
+and `SingleBExp SingleAdd (SingleVar 6) (SingleConst 4)` is a symbolic expression adding a symbolic variable `6` and constant number `4`.
 * We use `Taint*` prefix on symbolic expressions related to the taint type.
-For exmaple, `TaintConst true` represents tainted, and `TaintVar 7` is a variable of taint.
+For example, `TaintConst true` represents tainted, and `TaintVar 7` is a variable of taint.
 
 ### 4.1.3. Scripts
 
@@ -282,14 +282,14 @@ All scripts mentioned below support `-h`/`--help` to show the detail usages.
 
 ## 4.2. Scale
 
-Scale is written in Ocaml 4.14.2, an Ocaml version compatible with the critical helper library `clangml`.
+Scale is written in OCaml 4.14.2, an OCaml version compatible with the critical helper library `clangml`.
 
 To bind `clangml` to LLVM 16.0.6 instead of the default LLVM 14,
 we build it from source code (commit `52df9b7`), which is located at `~/clangml/`.
 The build commands can be found at `$ROOT/Dockerfile`.
-The source code can be accessed at the [official Github repo](https://github.com/ocamllibs/clangml).
+The source code can be accessed at the [official GitHub repo](https://github.com/ocamllibs/clangml).
 
-### 4.2.1. Usage
+### 4.2.1. Usage {#scale-usage}
 
 There are four major subcommands:
 
@@ -316,10 +316,10 @@ type t =
 
 These commands are invoked by `scripts/compile_benchmark.py` under Benchmark component.
 
-### 4.2.2. Important Files
+### 4.2.2. Important Files {#scale-directories}
 
-* `docs/annotation-grammar.txt`: Describe the syntax of *SecSep* annotation.
-* `src/main.ml`: Main entry of Scale, defining all subcommands.
+* `docs/annotation-grammar.txt`: Syntax of *SecSep* annotation
+* `src/main.ml`: Main entry of Scale defining all subcommands
 * `src/func_input.ml`: Define the types of inputs for the Octal inference algorithms.
 * `src/syntax.ml`: Define the structs for annotation and function.
 
@@ -328,9 +328,9 @@ These commands are invoked by `scripts/compile_benchmark.py` under Benchmark com
 
 ### 4.3.1. How Benchmarks are Crafted
 
-Many of our benchmarks are adapted from BoringSSL, an open-source cryptographic library.
+Many of our benchmarks are adapted from [BoringSSL](https://boringssl.googlesource.com/boringssl), an open-source cryptographic library.
 The base version is commit `d26384906`, located under `$ROOT/benchmark/third_party/boringssl`.
-The online version can be accessed through [this link](https://github.com/google/boringssl/tree/d2638490679527185fe9817e24eca316acc93d96).
+It can be viewed online through [this link](https://github.com/google/boringssl/tree/d2638490679527185fe9817e24eca316acc93d96).
 
 We override selected BoringSSL source files by placing their modified versions under `$ROOT/benchmark/src/boringssl`.
 These files follow the same directory hierarchy as the BoringSSL source tree.
@@ -341,25 +341,25 @@ The priority logic is defined in `$ROOT/benchmark/Makefile`.
 
 To simplify the linking, we include the definitions of all symbols in the benchmark entry file.
 
-### 4.3.2. Important Files
+### 4.3.2. Important Files {#benchmark-directories}
 
 * `src/`
-  * `entry/`: Entry points of all benchmarks.
-  * `boringssl/`: Replaced files for BoringSSL with *SecSep* annotations.
-* `third_party/boringssl/`: BoringSSL source tree.
-* `scripts`
+  * `entry/`: Entry points of all benchmarks
+  * `boringssl/`: Replaced files for BoringSSL with *SecSep* annotations
+* `third_party/boringssl/`: BoringSSL source tree
+* `scripts/`
   * `compile_benchmark.py`: Compile source code into assembly and generate inputs for Octal.
   It also performs ProSpeCT-style transformation.
   * `get_binaries.py`: Compile (ProSpeCT-/SecSep-transformed) assemblies into binaries.
-* `analysis/`: Original assemblies, inputs for Octal, transformed assemblies, built binaries.
+* `analysis/`: Original assemblies, inputs for Octal, transformed assemblies, built binaries
   * `<bench>.s`: Original assembly
-  * `<bench>.tf[123]?.s`: SecSep-transformed assemblies, available after Octal runs.
+  * `<bench>.tf[123]?.s`: SecSep-transformed assemblies; available after Octal runs
   `tf` is the full transformation, while `tf1`/`tf2`/`tf3` are full transformation without consecutive push pop optimization / without $C_{\text{callee}}$ / without both.
-  * `<bench>.prospect_(pub|sec)stk.s`: ProSpeCT-transformed assemblies, using public-/secret-stack scheme.
+  * `<bench>.prospect_(pub|sec)stk.s`: ProSpeCT-transformed assemblies, using public-/secret-stack scheme
 
 ## 4.4. Octal
 
-Octal inference, checking and transformation are written in Ocaml 5.3.0.
+Octal inference, checking and transformation are written in OCaml 5.3.0.
 
 Octal inference algorithms accept the original assembly and inference inputs generated by Benchmark component,
 and output the inferred Octal.
@@ -386,7 +386,7 @@ Octal transformation takes the inferred Octal and the original assembly, and out
   * Products: `out/<bench>/<bench>.tf[123]?.s`
 
 
-### 4.4.1. Usage
+### 4.4.1. Usage {#octal-usage}
 
 We provide a python script `scripts/run.py` to run all phases of the Octal.
 ```bash
@@ -413,11 +413,11 @@ Figures can be drawn using
 ```
 
 
-### 4.4.2. Important Files
+### 4.4.2. Important Files {#octal-directories}
 
-* `lib/` Implements the inference algorithms and transformation
-* `checker/` Implements the checker
-* `bin/` Entry points of all phases
+* `lib/`: Inference algorithms and transformation
+* `checker/`: Type checker
+* `bin/`: Entry points of all phases
   * Inference phase 0: `preprocess_input.ml`
   * Inference phase 1: `infer_single.ml`
   * Inference phase 2: `infer_range.ml`
@@ -425,7 +425,7 @@ Figures can be drawn using
   * Checker phase 0: `convert.ml`
   * Checker phase 1: `check.ml`
   * Transformation: `prog_transform.ml`
-* `interface/`: Interface of common functions.
+* `interface/`: Interface of common functions
 * `scripts/`
   * `run.py`: Helper script to run phases
   * `eval.py`: Run evaluation using Gem5
@@ -449,7 +449,7 @@ The defense can be divided into two parts:
 2. How to delay secret-leaking speculative executions?
    * `src/cpu/o3/*`: Delay secret-leaking speculative operations such as loads/stores with tainted address, squashes based on tainted condition, insecure LSQ forwarding, etc.
 
-### 4.5.2. Important Files
+### 4.5.2. Important Files {#gem5-directories}
 
 * `scripts/`
   * `run.py`: A helper script called by `~/secsep/octal/scripts/eval.py` to run a binary with or without enabling the defense.
