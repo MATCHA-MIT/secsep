@@ -13,4 +13,4 @@
 [submodule "gem5"]
 	path = gem5
 	url = git@github.mit.edu:arch-sec/gem5-mirror.git
-	branch = secsep
+	branch = artifact
