@@ -1,8 +1,10 @@
 ---
+pandoc_args: ["--quiet"]
 puppeteer:
   landscape: true
   format: "A4"
   printBackground: true
+  outline: true
 ---
 
 <!-- @import "[TOC]" {cmd="toc" depthFrom=1 depthTo=6 orderedList=false} -->
@@ -10,14 +12,15 @@ puppeteer:
 <!-- code_chunk_output -->
 
 - [1. Overview](#1-overview)
-  - [1.1. Workflow](#11-workflow)
+  - [1.1. *SecSep* Workflow](#11-secsep-workflow)
   - [1.2. Artifact Hierarchy Explained](#12-artifact-hierarchy-explained)
 - [2. Environment Setup](#2-environment-setup)
   - [2.1. Docker](#21-docker)
-  - [2.2. Build and Start Docker Containers](#22-build-and-start-docker-containers)
-  - [2.3. Build Components](#23-build-components)
+  - [2.2. Docker Resource Limitation](#22-docker-resource-limitation)
+  - [2.3. Build and Start Docker Containers](#23-build-and-start-docker-containers)
+  - [2.4. Build Components](#24-build-components)
 - [3. Run Toolchain for Benchmarks](#3-run-toolchain-for-benchmarks)
-  - [3.1. How to Read the Evaluation Results](#31-how-to-read-the-evaluation-results)
+  - [3.1. How to Read Evaluation Results](#31-how-to-read-evaluation-results)
 - [4. Components Explained](#4-components-explained)
   - [4.1. Conventions](#41-conventions)
     - [4.1.1. Ocaml and S-Exp](#411-ocaml-and-s-exp)
@@ -38,23 +41,34 @@ puppeteer:
 
 <!-- /code_chunk_output -->
 
-
+<div style="page-break-after: always;"></div>
 
 # 1. Overview
 
-Cryptographic software, while following constant-time coding guidelines, may still leak secrets under speculative execution. For defenses where the processor tracks secrets using taint tracking and delays secret-leaking speculation, precisely tracking secrets in memory is crucial to avoid overtainting and unnecessary delays. Tracking secrets on the stack is especially challenging because secrets can mix with public data.
+Here is a brief abstract of our work *SecSep*:
 
-We present a prototype implementation of ***SecSep***, a transformation framework that rewrites assembly programs at compile time by identifying and partitioning secret and public data on the stack.  After partitioning, secret and public data are divided into different pages. This enables a simple yet precise way for taint tracking to tell the secrecy of data loaded from the memory. ***SecSep*** introduces a typed assembly language *Octal* and a heuristic inference algorithm to recover lost dataflow semantics at assembly level.
+> Cryptographic software, while following constant-time coding guidelines, may still leak secrets under speculative execution. For defenses where the processor tracks secrets using taint tracking and delays secret-leaking speculation, precisely tracking secrets in memory is crucial to avoid overtainting and unnecessary delays. Tracking secrets on the stack is especially challenging because secrets can mix with public data.
+>
+> We present a prototype implementation of *SecSep*, a transformation framework that rewrites assembly programs at compile time by identifying and partitioning secret and public data on the stack.  After partitioning, secret and public data are divided into different pages. This enables a simple yet precise way for taint tracking to tell the secrecy of data loaded from the memory. *SecSep* introduces a typed assembly language *Octal* and a heuristic inference algorithm to recover lost dataflow semantics at assembly level.
+>
+> Programs transformed by *SecSep* achieve secure speculation with an average overhead of 1.2%, on a hardware implementing simple taint tracking.
 
-Programs transformed by ***SecSep*** achieve secure speculation with an average overhead of 1.2%, on a hardware implementing simple taint tracking.
+This artifact implements the entire *SecSep* workflow, which infers, transforms, and evaluates cryptographic programs.
 
-This artifact implements the entire ***SecSep*** workflow, which infers, transforms, and evaluates multiple cryptographic programs.
+Guidelines on how to use this README:
 
-## 1.1. Workflow
+* **To simply understand this artifact and reproduce the results**:
+  * Read [Section 1](#1-overview) for a quick overview
+  * Follow [Section 2](#2-environment-setup) and [Section 3](#3-run-toolchain-for-benchmarks) to setup environments and reproduce the results.
+* **To explore how the components work**:
+  * Read [Section 4](#4-components-explained)
+  * Explore the code!
+
+## 1.1. *SecSep* Workflow
 
 ![SecSep Workflow](images/secsep-workflow.png)
 
-***SecSep*** workflow can be described in five steps:
+*SecSep* workflow consists of four components (marked with different colors) and can be described in five steps:
 
 1. <span style="color:green">User writes down SecSep annotations in the source code for each function.
 2. <span style="color:blue">Benchmark toolchain compiles source code into assembly and generates inputs for the inference tool.
@@ -66,21 +80,22 @@ This artifact implements the entire ***SecSep*** workflow, which infers, transfo
 
 ## 1.2. Artifact Hierarchy Explained
 
-The framework is composed of four components explained in the following table. We use different colors to indicate where they are in the workflow.
+The four components are explained in the following table.
+We use different colors to indicate where they are in the workflow.
 
 `$ROOT` represents the root directory where this `README` file locates.
 
 <div class="table1">
 |Component|Location|Purpose|
 |:-|:-|:-|
-|<span style="color:blue">Scale|`$ROOT/scale`|A tiny AST walker based on Clang to collect source-code information:<br>(1) Help parse ***SecSep*** annotations on each function.<br>(2) Get statistics of each function, e.g. the number of arguments.|
-|<span style="color:blue">Benchmark|`$ROOT/benchmark`| A directory to hold all benchmarks and do the compilation stuff.<br>(1) Contain the source code of all benchmarks. <br>(2) Use Scale to parse ***SecSep*** annotations and generate inputs for inference. <br>(3) Compile source code into assembly; compile (transformed) assembly into binary.|
-|<span style="color:orange">Octal|`$ROOT/octal`| Inference algorithms to infer Octal, the typed assembly language, from the raw assembly code.<br>(1) Infer the dependent type, valid region, and taint type. <br>(2) Check the inference results using a small-TCB checker. <br>(3) Transform original assembly based on inferred Octal using ***SecSep***'s transformations.<br>(4) Run evaluations using (transformed) binaries and Gem5.|
+|<span style="color:blue">Scale|`$ROOT/scale`|A tiny AST walker based on Clang to collect source-code information:<br>(1) Help parse *SecSep* annotations on each function.<br>(2) Get statistics of each function, e.g. the number of arguments.|
+|<span style="color:blue">Benchmark|`$ROOT/benchmark`| A directory to hold all benchmarks and do the compilation stuff.<br>(1) Contain the source code of all benchmarks. <br>(2) Use Scale to parse *SecSep* annotations and generate inputs for inference. <br>(3) Compile source code into assembly; compile (transformed) assembly into binary.|
+|<span style="color:orange">Octal|`$ROOT/octal`| Inference algorithms to infer Octal, the typed assembly language, from the raw assembly code.<br>(1) Infer the dependent type, valid region, and taint type. <br>(2) Check the inference results using a small-TCB checker. <br>(3) Transform original assembly based on inferred Octal using *SecSep*'s transformations.<br>(4) Run evaluations using (transformed) binaries and Gem5.|
 |<span style="color:purple">Gem5 Simulator|`$ROOT/gem5`|Implement the ProSpeCT-style hardware defense on O3 CPU for evaluation.|
 </div>
 
 
-To get more information about each component, please visit `README` files under each component's directory.
+To get more information about each component, please read [Section 4](#4-components-explained).
 
 # 2. Environment Setup
 
@@ -98,7 +113,25 @@ We recommend following the steps of
 Our test platform uses `Docker version 27.5.1`, though most versions of Docker should work.
 If you encounter any problem, please consider upgrade or downgrade to this version, or contact us directly for supports.
 
-## 2.2. Build and Start Docker Containers
+## 2.2. Docker Resource Limitation
+
+The Docker container we provide has some expectations on available resources:
+
+* CPU cores: As many as possible.
+Both the container build and *SecSep* workflow can benefit from the parallelism.
+* Memory: At least 16 GB.
+* Free disk space: At least 128 GB.
+
+If you are using Docker Desktop:
+
+* Docker Desktop usually has strict limits on CPU, memory, and disk usage.
+* Open `Docker Desktop → Settings → Resources` and try to meet the expectations.
+
+If you are running Docker directly without Docker Desktop
+
+* Simply verify your host platform has at least 16 GB of free RAM and 128 GB of available disk space.
+
+## 2.3. Build and Start Docker Containers
 
 Inside `$ROOT` directory, run
 ```bash
@@ -116,7 +149,7 @@ The entire `$ROOT` directory on the host is mapped to `/root/secsep` (or `~/secs
 Unless otherwise specified, all following operations are performed inside the container, where `$ROOT` is assumed to be `~/secsep`.
 
 
-## 2.3. Build Components
+## 2.4. Build Components
 
 Among all components, <span style="color:blue">Scale</span>, <span style="color:orange">Octal</span>, and <span style="color:purple">Gem5</span> needs to be built.
 However, you only need to build <span style="color:purple">Gem5</span> manually.
@@ -137,7 +170,7 @@ $ scons build/X86_MESI_Two_Level/gem5.opt -j<nproc>
 # Simply press <Enter> to continue
 ```
 
-To build Scale and Octal manually (not required):
+To build Scale and Octal manually (not necessary):
 ```bash
 # It's OK to see this warning
 # >[WARNING] Running as root is not recommended
@@ -154,7 +187,7 @@ $ dune build && dune install
 
 Currently there are six supported benchmarks: `salsa20`, `sha512`, `chacha20`, `x25519`, `poly1305`, `ed25519_sign`. Their source code are located under the benchmark directory.
 
-We provide commands to run ***SecSep*** toolchain on one or all benchmarks.
+We provide commands to run *SecSep* toolchain on one or all benchmarks.
 These commands correspond to the five steps introduced in the [workflow section](#11-workflow).
 You must switch to the specified directory to run the commands.
 The results of each command is briefly explained.
@@ -164,22 +197,57 @@ Here are some configurable arguments and their explanation:
 
 * `<bench>` specifies the benchmark you choose to work on.
   Commands without `<bench>` work on all available benchmarks.
-* `<delta>` specifies the delta (in bytes) used by ***SecSep*** transformation.
+* `<delta>` specifies the delta (in bytes) used by *SecSep* transformation.
   Must be specified in hexadecimal format.
   In paper's evaluation, we use `0x800000`, i.e. 8MB.
 
 <div class="table2">
 |Step|Work Directory|Commands|Results|
 |:-:|:-|:-|:-|
-|1|`~/secsep/benchmark`| ***SecSep*** annotations have been written by us. You can search `"@secsep"` in the benchmark directory to get a preview of them by running `grep -rnI "@secsep"`|N/A|
+|1|`~/secsep/benchmark`| *SecSep* annotations have been written by us. You can search `"@secsep"` in the benchmark directory to get a preview of them by running `grep -rnI "@secsep"`|N/A|
 |2|`~/secsep/benchmark`|Use `make paper -j` to compile and construct inference inputs for all benchmarks, or use `make <bench>` to work on a specific benchmark.|You can find the assembly code and compile-time information like call graph, struct layouts, and stack spill slots under `analysis/<bench>`.|
 |3|`~/secsep/octal`    |Run `./scripts/run.py full --delta <delta> --name <bench>` to infer, check, and transform one benchmark.<br> Run `--name <bench1>,<bench2>,...` to work on multiple benchmarks.<br>To work on all benchmarks in parallel, just remove the `--name` argument.|Infer results and logs are under `out/<bench>`. Transformed assemblies are installed to `~/secsep/benchmark/analysis/<bench>/<bench>.<transform>.s`.|
 |4|`~/secsep/benchmark`|`./scripts/get_binaries.py`|Compiled binaries are at `analysis/<bench>/build`.|
 |5|`~/secsep/octal`    |Run `./scripts/eval.py --delta <delta> -p 16 -v` to let Gem5 exeuute all original or transformed binaries to evaluate their performance. The parallelism is controlled by `-p` (FYI, there are around 42 evaluation tasks. Be careful that too much parallelism may drain your memory). Use `-v` or `-vv` to get verbose output. <br>You will see the prompt "Will run gem5, confirm?". Press `y` and `<Return>` to confirm starting fresh Gem5 runs to get evaluation results.|An evaluation directory named by current time will be generated under `eval`.|
-|6|`/root/octal`    |Run `./scripts/figure.py <eval dir>` to draw figures according to the evaluation, where `<eval dir>` is the directory generated in step 5.|Figures are under `<eval dir>/figures`.|
+|6|`~/secsep/octal`    |Run `./scripts/figure.py <eval dir>` to draw figures according to the evaluation, where `<eval dir>` is the directory generated in step 5.|Figures are under `<eval dir>/figures`.|
 </div>
 
-## 3.1. How to Read the Evaluation Results
+## 3.1. How to Read Evaluation Results
+
+> In this and following sections, we will use regular expression to represent filenames.
+> For example, `?` indicates that the preceding element is optional,
+> `(xx|yy)` denotes a choice between alternatives,
+> and `[abc]` matches any single character from the set `a`, `b`, or `c`.
+
+Each time `~/secsep/octal/eval.py` is executed, a directory will be generated under `~/secsep/eval`.
+This directory contains important results generated by the evaluation:
+
+* `bench/`: Collection of all original and transformed assemblies (`*.s`), binaries, and disassembled binary (`*.asm`).
+* `secsep.(csv|tex)`: Source-code statistics for all functions in each benchmark, e.g. total number of lines of code / function arguments / local variables, etc.
+This is used to generate Table 1 in the paper.
+* `gem5/`: Detail statistics of Gem5 when executing each binary.
+* `declassification/`: To illustrate the effectiveness of SecSep's transformation,
+  when Gem5 with defense enabled runs a binary, it reports PC of any instruction that declassifies, i.e. nonspeculatively storing tainted data into public memory.
+  Because current benchmarks do not contain declassification behaviors, any such PC indicates the existence of leakage or overtainting.
+  Readers can locate declassifying instructions in the binary using the PC and the corresponding `*.asm` file.
+  Here are the major takeaways:
+  * Cryptographic functions in the original binary and insecurely transformed binaries contain declassifying instructions, e.g. storing secrets into the public stack.
+    * `<bench>.decl.txt`: Original binary
+    * `<bench>.prospect_pubstk.decl.txt`: ProSpeCT public-stack scheme
+  * Cryptographic functions in the securely transformed binaries do not declassify at all.
+    * `<bench>.prospect_secstk.decl.txt`: ProSpeCT secret-stack scheme
+    * `<bench>.tf1?.decl.txt`: SecSep's full transformation and full transformation without consecutive push pop optimization.
+  * SecSep transformations without $C_{\text{callee}}$ incurs overtainting and causes false positive declassification.
+    * `<bench>.tf[23].decl.txt`
+  * Declassifying instructions within C library functions are expected,
+    since transforming the C library and determining the secrecy of its global symbols are out of scope in this prototype.
+* `eval.csv`: Gem5's statistics when running binaries with or without the defense.
+  This is used to generate Figure 12 in the paper.
+  * Software overhead is calculated by comparing transformed binary's `gem5_cycles_def-off` with the original binary's `gem5_cycles_def-off`.
+  * Comprehensive overhead is calculated by comparing transformed binary's `gem5_cycles_def-on` with the original binary's `gem5_cycles_def-off`.
+* `stats/`: Statics when running Octal component's phases, e.g. time elapsed, number of SMT calls.
+This is used to generate Figure 17 in the appendix.
+* `figures/`: After running `~/secsep/octal/scripts/figure.py`, the overhead figure (Figure 12) and *SecSep* efficiency figure (Figure 17) used in the paper will appear here.
 
 # 4. Components Explained
 
@@ -250,7 +318,7 @@ These commands are invoked by `scripts/compile_benchmark.py` under Benchmark com
 
 ### 4.2.2. Important Files
 
-* `docs/annotation-grammar.txt`: Describe the syntax of ***SecSep*** annotation.
+* `docs/annotation-grammar.txt`: Describe the syntax of *SecSep* annotation.
 * `src/main.ml`: Main entry of Scale, defining all subcommands.
 * `src/func_input.ml`: Define the types of inputs for the Octal inference algorithms.
 * `src/syntax.ml`: Define the structs for annotation and function.
@@ -277,7 +345,7 @@ To simplify the linking, we include the definitions of all symbols in the benchm
 
 * `src/`
   * `entry/`: Entry points of all benchmarks.
-  * `boringssl/`: Replaced files for BoringSSL with ***SecSep*** annotations.
+  * `boringssl/`: Replaced files for BoringSSL with *SecSep* annotations.
 * `third_party/boringssl/`: BoringSSL source tree.
 * `scripts`
   * `compile_benchmark.py`: Compile source code into assembly and generate inputs for Octal.
@@ -287,7 +355,7 @@ To simplify the linking, we include the definitions of all symbols in the benchm
   * `<bench>.s`: Original assembly
   * `<bench>.tf[123]?.s`: SecSep-transformed assemblies, available after Octal runs.
   `tf` is the full transformation, while `tf1`/`tf2`/`tf3` are full transformation without consecutive push pop optimization / without $C_{\text{callee}}$ / without both.
-  * `<bench>.prospect_(pub|sec)stk.s`: ProSpeCT-transformed assemblies, using public/secret stack scheme.
+  * `<bench>.prospect_(pub|sec)stk.s`: ProSpeCT-transformed assemblies, using public-/secret-stack scheme.
 
 ## 4.4. Octal
 
@@ -388,7 +456,6 @@ The defense can be divided into two parts:
 Inside the script, different execution modes are:
     * `CONFIG_NONE`: No defense
     * `CONFIG_OURDEFENSE`: ProSpeCT-style defense
-  * `get_decl.py`: A helper script called by `~/secsep/octal/scripts/eval.py` to report PC of any instruction that declassifies, i.e. store tainted data into public memory.
-  This is to show the validness and effectiveness of SecSep's transformation.
+  * `get_decl.py`: A helper script called by `~/secsep/octal/scripts/eval.py` to report PC of any instruction that declassifies, i.e. storing tainted data into public memory.
 * `results/raw_data/`: Simulation logs 
 
