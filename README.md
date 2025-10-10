@@ -167,7 +167,7 @@ $ cd ~/secsep/gem5
 # build Gem5 using Scons
 # <nproc> is at your discretion
 $ scons build/X86_MESI_Two_Level/gem5.opt -j<nproc>
-# You will see the following prompt:
+# You might see the following prompt:
 # > You're missing the pre-commit/commit-msg hooks. These hook help to ensure your
 # > ...
 # > Press enter to continue, or ctrl-c to abort:
