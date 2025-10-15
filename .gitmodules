@@ -1,16 +1,16 @@
 [submodule "scale"]
 	path = scale
-	url = git@github.mit.edu:arch-sec/secsep-scale.git
+	url = https://github.com/matcha-mit/secsep-scale.git
 	branch = main
 [submodule "benchmark"]
 	path = benchmark
-	url = git@github.mit.edu:arch-sec/secsep-benchmark.git
-	branch = artifact
+	url = https://github.com/matcha-mit/secsep-benchmark.git
+	branch = main
 [submodule "octal"]
 	path = octal
-	url = git@github.mit.edu:arch-sec/secsep-octal.git
-	branch = artifact
+	url = https://github.com/matcha-mit/secsep-octal.git
+	branch = main
 [submodule "gem5"]
 	path = gem5
-	url = git@github.mit.edu:arch-sec/gem5-mirror.git
-	branch = artifact
+	url = https://github.com/matcha-mit/secsep-gem5.git
+	branch = main
